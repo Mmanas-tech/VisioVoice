@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 10%;
+  --foreground: 0 0% 96%;
+  --primary: 119 99% 46%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 0 0% 96%;
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 119 99% 46%;
+  --accent-foreground: 0 0% 4%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 96%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 119 99% 46%;
+  --radius: 0.5rem;
+}
+
+* {
+  @apply border-border;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-foreground font-sora antialiased;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+::selection {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+input:focus,
+textarea:focus {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+button {
+  @apply transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+a {
+  @apply text-primary hover:text-primary/80 transition-colors;
+}
