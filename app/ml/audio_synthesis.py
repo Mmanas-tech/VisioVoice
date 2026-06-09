@@ -1,9 +1,9 @@
-"""Audio synthesis from transcription text."""
+"""Audio synthesis from transcription text for output generation."""
 
 import logging
 import os
 import tempfile
-from typing import Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class AudioSynthesizer:
                 self._engine = pyttsx3.init()
                 self._engine.setProperty("rate", 150)
                 self._engine.setProperty("volume", 1.0)
-            except ImportError:
+            except (ImportError, RuntimeError):
                 logger.warning("pyttsx3 not available, TTS disabled")
                 return None
         return self._engine
@@ -36,13 +36,13 @@ class AudioSynthesizer:
     ) -> str:
         """
         Synthesize speech from text.
-        
+
         Args:
             text: Text to synthesize
             output_path: Path to save audio file
             voice_rate: Speech rate (words per minute)
             voice_volume: Volume level (0.0 to 1.0)
-            
+
         Returns:
             Path to the generated audio file
         """
@@ -67,18 +67,18 @@ class AudioSynthesizer:
 
     def synthesize_segments(
         self,
-        segments: list[dict],
+        segments: List[dict],
         output_dir: str,
         voice_rate: int = 150,
-    ) -> list[str]:
+    ) -> List[str]:
         """
         Synthesize audio for multiple transcription segments.
-        
+
         Args:
             segments: List of segment dicts with 'text' and timing info
             output_dir: Directory to save audio files
             voice_rate: Speech rate
-            
+
         Returns:
             List of paths to generated audio files
         """
@@ -100,19 +100,18 @@ class AudioSynthesizer:
         return audio_files
 
     @staticmethod
-    def combine_audio_files(audio_files: list[str], output_path: str) -> str:
+    def combine_audio_files(audio_files: List[str], output_path: str) -> str:
         """
         Combine multiple audio files into one.
-        
+
         Args:
             audio_files: List of audio file paths
             output_path: Output file path
-            
+
         Returns:
             Path to combined audio file
         """
         try:
-            import pydub
             from pydub import AudioSegment
 
             combined = AudioSegment.empty()
