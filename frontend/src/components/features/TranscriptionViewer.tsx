@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -7,6 +7,7 @@ import { transcriptionService } from '@/services/transcription'
 import { useTranscriptionStore } from '@/store/transcriptionStore'
 import { useUIStore } from '@/store/uiStore'
 import { formatTime, formatPercentage } from '@/utils/formatters'
+import { getSocket, joinTranscription, leaveTranscription, onTranscriptionProgress, onTranscriptionComplete } from '@/services/socket'
 import { FileText, Download, Trash2, RefreshCw } from 'lucide-react'
 import ExportModal from './ExportModal'
 
@@ -17,6 +18,7 @@ export default function TranscriptionViewer() {
   const [transcriptionId, setTranscriptionId] = useState('')
   const [progress, setProgress] = useState(0)
   const [showExport, setShowExport] = useState(false)
+  const cleanupRefs = useRef<(() => void)[]>([])
 
   const fetchTranscription = async () => {
     if (!transcriptionId.trim()) return
@@ -32,21 +34,31 @@ export default function TranscriptionViewer() {
     }
   }
 
-  const pollStatus = async () => {
-    if (!transcriptionId) return
-    try {
-      const status = await transcriptionService.getStatus(transcriptionId)
-      setProgress(status.progress)
-      if (status.status === 'completed' || status.status === 'failed') {
-        fetchTranscription()
-      }
-    } catch {}
-  }
-
   useEffect(() => {
     if (!transcriptionId) return
-    const interval = setInterval(pollStatus, 3000)
-    return () => clearInterval(interval)
+
+    const socket = getSocket()
+    joinTranscription(transcriptionId)
+
+    const unsubProgress = onTranscriptionProgress((data) => {
+      if (data.transcription_id === transcriptionId) {
+        setProgress(data.progress)
+      }
+    })
+
+    const unsubComplete = onTranscriptionComplete((data) => {
+      if (data.transcription_id === transcriptionId) {
+        fetchTranscription()
+      }
+    })
+
+    cleanupRefs.current.push(unsubProgress, unsubComplete)
+
+    return () => {
+      leaveTranscription(transcriptionId)
+      cleanupRefs.current.forEach((fn) => fn())
+      cleanupRefs.current = []
+    }
   }, [transcriptionId])
 
   const handleDelete = async () => {

@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/Button'
 import { transcriptionService } from '@/services/transcription'
 import { useUIStore } from '@/store/uiStore'
-import { Download } from 'lucide-react'
+import { Download, FileText, FileImage, FileCode } from 'lucide-react'
 
-type ExportFormat = 'json' | 'srt' | 'vtt'
+type ExportFormat = 'json' | 'srt' | 'vtt' | 'docx' | 'pdf'
 
 interface ExportModalProps {
   transcriptionId: string
@@ -17,6 +17,8 @@ const formats: { value: ExportFormat; label: string; description: string }[] = [
   { value: 'json', label: 'JSON', description: 'Structured data' },
   { value: 'srt', label: 'SRT', description: 'Subtitle file' },
   { value: 'vtt', label: 'VTT', description: 'WebVTT subtitles' },
+  { value: 'docx', label: 'DOCX', description: 'Word document' },
+  { value: 'pdf', label: 'PDF', description: 'PDF document' },
 ]
 
 export default function ExportModal({ transcriptionId, isOpen, onClose }: ExportModalProps) {

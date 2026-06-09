@@ -24,6 +24,7 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_routes={
         "app.tasks.transcription_tasks.*": {"queue": "transcription"},
+        "app.tasks.audio_synthesis_tasks.*": {"queue": "audio"},
     },
     task_default_queue="default",
     task_default_priority=5,

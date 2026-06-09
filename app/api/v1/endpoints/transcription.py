@@ -105,7 +105,7 @@ def get_transcription_status(
 @router.get("/{transcription_id}/export")
 def export_transcription(
     transcription_id: str,
-    format: str = Query("json", pattern=r"^(json|srt|vtt)$"),
+    format: str = Query("json", pattern=r"^(json|srt|vtt|docx|pdf)$"),
     db: Session = Depends(get_sync_db_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -125,6 +125,40 @@ def export_transcription(
     elif format == "vtt":
         vtt_content = transcription_service.export_vtt(transcription)
         return PlainTextResponse(content=vtt_content, media_type="text/vtt")
+    elif format in ("docx", "pdf"):
+        from app.ml.document_export import document_exporter
+        segments = [
+            {
+                "segment_index": s.segment_index,
+                "start_ms": s.start_time_ms,
+                "end_ms": s.end_time_ms,
+                "text": s.text,
+                "confidence_score": s.confidence_score,
+            }
+            for s in sorted(transcription.segments, key=lambda s: s.segment_index)
+        ]
+        full_text = transcription.cleaned_transcript or transcription.raw_transcript or ""
+        metadata = {
+            "Confidence": f"{transcription.confidence_score:.1%}" if transcription.confidence_score else "N/A",
+            "Processing Time": f"{transcription.processing_time_seconds}s" if transcription.processing_time_seconds else "N/A",
+            "Model": transcription.model_version or "N/A",
+            "Language": transcription.language_detected or "N/A",
+            "Segments": len(segments),
+        }
+        if format == "docx":
+            content = document_exporter.export_docx(segments, full_text, metadata=metadata)
+            return Response(
+                content=content,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f"attachment; filename=transcription_{transcription_id}.docx"},
+            )
+        elif format == "pdf":
+            content = document_exporter.export_pdf(segments, full_text, metadata=metadata)
+            return Response(
+                content=content,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=transcription_{transcription_id}.pdf"},
+            )
 
 
 @router.delete("/{transcription_id}", response_model=MessageResponse)

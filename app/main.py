@@ -144,6 +144,17 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(audio_router, prefix="/api/v1")
 
+    from app.core.websocket import sio, redis_listener
+    import socketio.asgi
+    import asyncio
+
+    sio_app = socketio.ASGIApp(sio, app)
+    app = sio_app
+
+    @app.on_event("startup")
+    async def start_redis_listener():
+        asyncio.create_task(redis_listener())
+
     @app.get("/")
     async def root():
         return {

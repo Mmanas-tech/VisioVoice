@@ -29,6 +29,8 @@ export const EXPORT_FORMATS = [
   { value: 'json', label: 'JSON', description: 'Structured data' },
   { value: 'srt', label: 'SRT', description: 'Subtitle format' },
   { value: 'vtt', label: 'VTT', description: 'WebVTT subtitles' },
+  { value: 'docx', label: 'DOCX', description: 'Word document' },
+  { value: 'pdf', label: 'PDF', description: 'PDF document' },
 ] as const
 
 export const TTS_BACKENDS = [

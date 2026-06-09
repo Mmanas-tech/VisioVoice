@@ -27,6 +27,31 @@ services:
           cpus: "2.0"
           memory: 4G
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lipread-frontend
+    ports:
+      - "80:80"
+    networks:
+      - lipread-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: lipread-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+      - frontend
+    networks:
+      - lipread-network
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: lipread-postgres
@@ -78,7 +103,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: lipread-celery-worker
-    command: celery -A app.tasks.celery_app worker -l info -Q transcription -c 4
+    command: celery -A app.tasks.celery_app worker -l info -Q transcription,default -c 4
     env_file:
       - .env
     depends_on:
@@ -98,6 +123,31 @@ services:
           cpus: "2.0"
           memory: 4G
 
+  celery-audio-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lipread-celery-audio-worker
+    command: celery -A app.tasks.celery_app worker -l info -Q audio -c 2
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage:/app/storage
+      - ./models:/app/models
+    networks:
+      - lipread-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+
   celery-beat:
     build:
       context: .
@@ -109,6 +159,23 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - lipread-network
+    restart: unless-stopped
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lipread-flower
+    command: celery -A app.tasks.celery_app flower --port=5555 --basic_auth=*
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "5555:5555"
     networks:
       - lipread-network
     restart: unless-stopped

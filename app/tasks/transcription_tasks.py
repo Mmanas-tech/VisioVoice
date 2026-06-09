@@ -30,6 +30,12 @@ def update_progress(transcription_id: str, progress: int, message: str):
     except Exception as e:
         logger.warning(f"Failed to update progress: {e}")
 
+    try:
+        from app.core.ws_events import emit_transcription_progress
+        emit_transcription_progress(transcription_id, progress, message)
+    except Exception as e:
+        logger.debug(f"WebSocket emit failed: {e}")
+
     logger.info(f"Progress [{transcription_id}]: {progress}% - {message}")
 
 
@@ -184,6 +190,16 @@ def process_video_transcription(
         db.commit()
 
         update_progress(transcription_id, 100, "Completed!")
+
+        try:
+            from app.core.ws_events import emit_transcription_complete
+            emit_transcription_complete(transcription_id, {
+                "status": "completed",
+                "confidence": avg_confidence,
+                "segments_count": len(segments),
+            })
+        except Exception as e:
+            logger.debug(f"WebSocket emit failed: {e}")
 
         result = {
             "transcription_id": transcription_id,

@@ -1,41 +1,72 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { audioService } from '@/services/audio'
 import { useUIStore } from '@/store/uiStore'
+import { getSocket, joinTranscription, leaveTranscription, onAudioProgress, onAudioComplete } from '@/services/socket'
 import { Mic, Download, Music } from 'lucide-react'
 
 export default function AudioPanel() {
   const [transcriptionId, setTranscriptionId] = useState('')
   const [ttsBackend, setTtsBackend] = useState('pyttsx3')
   const [isSynthesizing, setIsSynthesizing] = useState(false)
+  const [synthesisProgress, setSynthesisProgress] = useState(0)
+  const [synthesisMessage, setSynthesisMessage] = useState('')
   const [synthesisResult, setSynthesisResult] = useState<Record<string, string> | null>(null)
   const addToast = useUIStore((s) => s.addToast)
+  const cleanupRefs = useRef<(() => void)[]>([])
+
+  useEffect(() => {
+    if (!transcriptionId || !isSynthesizing) return
+
+    const socket = getSocket()
+    joinTranscription(transcriptionId)
+
+    const unsubProgress = onAudioProgress((data) => {
+      if (data.transcription_id === transcriptionId) {
+        setSynthesisProgress(data.progress)
+        setSynthesisMessage(data.message)
+      }
+    })
+
+    const unsubComplete = onAudioComplete((data) => {
+      if (data.transcription_id === transcriptionId) {
+        setIsSynthesizing(false)
+        setSynthesisProgress(100)
+        setSynthesisMessage('Complete')
+        loadSynthesisResult(transcriptionId)
+        addToast({ title: 'Audio synthesis complete', variant: 'success' })
+      }
+    })
+
+    cleanupRefs.current.push(unsubProgress, unsubComplete)
+
+    return () => {
+      leaveTranscription(transcriptionId)
+      cleanupRefs.current.forEach((fn) => fn())
+      cleanupRefs.current = []
+    }
+  }, [transcriptionId, isSynthesizing])
+
+  const loadSynthesisResult = async (id: string) => {
+    try {
+      const status = await audioService.getSynthesisStatus(id)
+      if (status.audio_files && Object.keys(status.audio_files).length > 0) {
+        setSynthesisResult(status.audio_files)
+      }
+    } catch {}
+  }
 
   const handleSynthesize = async () => {
     if (!transcriptionId.trim()) return
     setIsSynthesizing(true)
+    setSynthesisProgress(0)
+    setSynthesisMessage('Starting...')
     try {
       await audioService.requestSynthesis(transcriptionId, { ttsBackend })
       addToast({ title: 'Synthesis started', variant: 'success' })
-
-      const pollInterval = setInterval(async () => {
-        try {
-          const status = await audioService.getSynthesisStatus(transcriptionId)
-          if (status.status === 'completed') {
-            clearInterval(pollInterval)
-            setSynthesisResult(status.audio_files)
-            setIsSynthesizing(false)
-            addToast({ title: 'Audio synthesis complete', variant: 'success' })
-          } else if (status.status === 'failed') {
-            clearInterval(pollInterval)
-            setIsSynthesizing(false)
-            addToast({ title: 'Synthesis failed', variant: 'error' })
-          }
-        } catch {}
-      }, 3000)
     } catch {
       setIsSynthesizing(false)
       addToast({ title: 'Error', description: 'Failed to start synthesis', variant: 'error' })
@@ -91,6 +122,18 @@ export default function AudioPanel() {
               ))}
             </div>
           </div>
+
+          {isSynthesizing && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{synthesisMessage}</span>
+                <span>{synthesisProgress}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div className="bg-primary h-full transition-all duration-500" style={{ width: `${synthesisProgress}%` }} />
+              </div>
+            </div>
+          )}
 
           <Button onClick={handleSynthesize} disabled={!transcriptionId.trim() || isSynthesizing}>
             {isSynthesizing ? 'Synthesizing...' : 'Start Synthesis'}

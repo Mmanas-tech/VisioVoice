@@ -28,6 +28,12 @@ def update_synthesis_progress(transcription_id: str, progress: int, message: str
     except Exception as e:
         logger.warning(f"Failed to update synthesis progress: {e}")
 
+    try:
+        from app.core.ws_events import emit_audio_progress
+        emit_audio_progress(transcription_id, progress, message)
+    except Exception as e:
+        logger.debug(f"WebSocket emit failed: {e}")
+
     logger.info(f"Audio synthesis progress [{transcription_id}]: {progress}% - {message}")
 
 
@@ -141,6 +147,15 @@ def synthesize_audio_for_transcription(
         db.commit()
 
         update_synthesis_progress(transcription_id, 100, "Audio synthesis completed!")
+
+        try:
+            from app.core.ws_events import emit_audio_complete
+            emit_audio_complete(transcription_id, {
+                "status": "completed",
+                "audio_files": {fmt: info["path"] for fmt, info in audio_files.items()},
+            })
+        except Exception as e:
+            logger.debug(f"WebSocket emit failed: {e}")
 
         total_time = time.time() - start_time
         logger.info(f"Audio synthesis completed for {transcription_id} in {total_time:.2f}s")
