@@ -80,7 +80,7 @@ def blacklist_token(token: str, redis_client: Any) -> None:
             ttl = max(int(exp - datetime.now(timezone.utc).timestamp()), 0)
             redis_client.setex(f"blacklist:{token}", ttl, "1")
     except AuthenticationError:
-        pass
+        logger.debug("Cannot blacklist invalid token")
 
 
 def is_token_blacklisted(token: str, redis_client: Any) -> bool:

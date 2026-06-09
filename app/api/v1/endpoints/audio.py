@@ -209,8 +209,8 @@ def list_tts_backends():
     try:
         import pyttsx3
         tts._engine = pyttsx3.init()
-    except Exception:
-        pass
+    except (ImportError, RuntimeError) as exc:
+        logger.debug(f"pyttsx3 not available: {exc}")
 
     return {
         "available_backends": tts.available_backends,

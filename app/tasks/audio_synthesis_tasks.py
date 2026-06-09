@@ -167,8 +167,8 @@ def synthesize_audio_for_transcription(
                 details["audio_synthesis"] = {"status": "failed", "error": str(exc)[:500]}
                 transcription.details_json = details
                 db.commit()
-        except Exception:
-            pass
+        except Exception as inner_exc:
+            logger.error(f"Failed to record synthesis failure: {inner_exc}")
 
         raise self.retry(exc=exc)
 

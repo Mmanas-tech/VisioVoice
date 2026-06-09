@@ -24,10 +24,10 @@ router = APIRouter(tags=["Health"])
 registry = CollectorRegistry()
 
 try:
-    multiprocess
+    multiprocess  # type: ignore[name-defined]
     registry = CollectorRegistry()
-except Exception:
-    pass
+except NameError:
+    logger.debug("prometheus_client multiprocess not available, using single registry")
 
 
 def check_database() -> str:

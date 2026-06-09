@@ -100,7 +100,7 @@ class ModelManager:
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
             except ImportError:
-                pass
+                logger.debug("torch not available for CUDA cache cleanup")
             logger.info(f"Model unloaded: {cache_key}")
 
     def unload_all(self):
@@ -113,7 +113,7 @@ class ModelManager:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except ImportError:
-            pass
+            logger.debug("torch not available for CUDA cache cleanup")
         logger.info("All models unloaded")
 
     def get_loaded_models(self) -> Dict[str, Dict[str, Any]]:
