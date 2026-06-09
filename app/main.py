@@ -135,12 +135,14 @@ def create_app() -> FastAPI:
     from app.api.v1.endpoints.videos import router as videos_router
     from app.api.v1.endpoints.transcription import router as transcription_router
     from app.api.v1.endpoints.health import router as health_router
+    from app.api.v1.endpoints.audio import router as audio_router
 
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(videos_router, prefix="/api/v1")
     app.include_router(transcription_router, prefix="/api/v1")
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(audio_router, prefix="/api/v1")
 
     @app.get("/")
     async def root():
