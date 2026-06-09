@@ -311,9 +311,9 @@ cp DEPLOYMENT.md /path/to/repo/docs/DEPLOYMENT.md
 Replace placeholders:
 - `https://github.com/Mmanas-tech/VisioVoice` → Your repo URL
 - `visiovoice` → Your project name
-- `[Your Name]` → Your name
-- `your-email@gmail.com` → Your email
-- `yourdomain.com` → Your actual domain
+- `[Manas Maddela]` → Manas Maddela
+- `your-email@gmail.com` → mmanas.tech@gmail.com
+- `yourdomain.com` → --WIP--
 
 ### Step 3: Create Additional Files
 
@@ -445,8 +445,7 @@ git push origin main
 ### For Questions About Documentation
 - Create GitHub Issue
 - Use GitHub Discussions
-- Email: support@visiovoice.dev
-- Slack Community: [Join](https://visiovoice.slack.com)
+- Email: Mmanas.tech@gmail.com
 
 ### For Technical Issues
 - Check Troubleshooting section in README
@@ -456,7 +455,7 @@ git push origin main
 
 ### For Security Issues
 - **DO NOT** create public GitHub issue
-- Email: security@visiovoice.dev
+- Email: Mmanas.tech@gmail.com
 - Use responsible disclosure
 - Allow 90 days for fix/patch
 
@@ -512,6 +511,6 @@ You now have everything needed to launch VisioVoice professionally.
 
 ---
 
-**Last Updated**: January 2024  
+**Last Updated**: June 2026  
 **Created by**: [Manas](https://github.com/Mmanas-tech)  
 **Status**: Production Ready ✅
