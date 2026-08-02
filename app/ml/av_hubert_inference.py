@@ -177,15 +177,18 @@ class AVHubertInference:
 
         if self.user_dir:
             user_dir_parent = os.path.dirname(self.user_dir)
-            if user_dir_parent not in sys.path:
+            import importlib
+            if "avhubert" not in sys.modules:
                 sys.path.insert(0, user_dir_parent)
-            import avhubert
+                import avhubert
+            else:
+                avhubert = sys.modules["avhubert"]
 
         base_dir = os.path.dirname(os.path.abspath(checkpoint_path))
         pretrain_dict = os.path.join(base_dir, "pretrain_dict")
         s2s_dict = os.path.join(base_dir, "s2s_dict")
 
-        state = torch.load(checkpoint_path, map_location="cpu")
+        state = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
         cfg = state["cfg"]
 
         cfg["task"]["label_dir"] = s2s_dict
@@ -282,7 +285,7 @@ class AVHubertInference:
             (tokens, score, attention_weights)
         """
         eos = self.dictionary.eos()
-        bos = self.dictionary.eos()
+        bos = self.dictionary.bos()
         pad = self.dictionary.pad()
 
         max_len = min(
@@ -342,7 +345,7 @@ class AVHubertInference:
             (best_tokens, best_score, attention_weights)
         """
         eos = self.dictionary.eos()
-        bos = self.dictionary.eos()
+        bos = self.dictionary.bos()
         pad = self.dictionary.pad()
 
         beam_size = self.beam_size

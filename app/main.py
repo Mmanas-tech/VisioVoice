@@ -28,11 +28,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
 
-    if settings.JWT_SECRET_KEY in ("change-me-in-production", "your-super-secret-key-change-in-production"):
+    if settings.ENVIRONMENT == "production":
+        try:
+            settings.validate_production_settings()
+        except ValueError as e:
+            logger.critical(f"PRODUCTION CONFIG ERROR: {e}")
+            raise
+
+    if not settings.JWT_SECRET_KEY:
         logger.critical(
-            "SECURITY WARNING: JWT_SECRET_KEY is set to a default value! "
-            "This is insecure and must be changed in production. "
-            "Set a strong, unique JWT_SECRET_KEY in your .env file."
+            "SECURITY WARNING: JWT_SECRET_KEY is not set! "
+            "This is insecure. Set a strong, unique JWT_SECRET_KEY in your .env file."
         )
 
     try:
@@ -83,7 +89,10 @@ def create_app() -> FastAPI:
     )
 
     if settings.ENVIRONMENT == "production":
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+        from app.config import get_settings as _get_settings
+        _s = _get_settings()
+        host_list = _s.ALLOWED_ORIGINS if _s.ALLOWED_ORIGINS else ["localhost"]
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=host_list)
 
     from app.core.rate_limiter import RateLimitMiddleware
     app.add_middleware(
@@ -182,9 +191,10 @@ def create_app() -> FastAPI:
             "docs": "/docs" if settings.DEBUG else "API documentation not available in production",
         }
 
-    from app.core.websocket import sio
+    from app.core.websocket import sio, configure_cors
     import socketio.asgi
 
+    configure_cors(settings.ALLOWED_ORIGINS)
     raw_app = app
     app = socketio.ASGIApp(sio, app)
 

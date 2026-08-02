@@ -2,6 +2,7 @@
 
 import logging
 import math
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -45,17 +46,37 @@ async def upload_video(
     if ext not in [".mp4", ".mov", ".avi", ".mkv"]:
         raise UnsupportedFileTypeError(file_type=ext, allowed=[".mp4", ".mov", ".avi", ".mkv"])
 
-    file_content = await video_file.read()
     max_size = 2048 * 1024 * 1024
-    if len(file_content) > max_size:
-        raise FileTooLargeError(max_size_mb=2048)
+    import tempfile
+    import shutil
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            tmp_path = tmp.name
+            total_size = 0
+            chunk_size = 1024 * 1024  # 1MB chunks
+            while True:
+                chunk = await video_file.read(chunk_size)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > max_size:
+                    os.unlink(tmp_path)
+                    raise FileTooLargeError(max_size_mb=2048)
+                tmp.write(chunk)
 
-    video_data = await video_service.save_uploaded_video(
-        file_content=file_content,
-        user_id=current_user.id,
-        filename=video_file.filename,
-        title=title,
-    )
+        with open(tmp_path, "rb") as f:
+            file_content = f.read()
+
+        video_data = await video_service.save_uploaded_video(
+            file_content=file_content,
+            user_id=current_user.id,
+            filename=video_file.filename,
+            title=title,
+        )
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     video = Video(
         user_id=current_user.id,

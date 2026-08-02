@@ -68,9 +68,7 @@ class ModelService:
             start_time = time.time()
 
             kwargs = {"return_confidence": return_confidence}
-            if return_logits and hasattr(model, '_impl') and isinstance(model._impl, type) and hasattr(model._impl, 'infer_single_video'):
-                pass
-            elif return_logits:
+            if return_logits:
                 kwargs["return_logits"] = return_logits
 
             result = model.infer_single_video(frames, **kwargs)

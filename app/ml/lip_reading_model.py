@@ -322,7 +322,7 @@ class LipReadingModel(nn.Module):
 
     def load_checkpoint(self, checkpoint_path: str, strict: bool = False):
         """Load model weights from checkpoint."""
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
         if "model_state_dict" in checkpoint:
             state_dict = checkpoint["model_state_dict"]
         else:

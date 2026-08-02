@@ -9,10 +9,21 @@ logger = logging.getLogger(__name__)
 
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*",
+    cors_allowed_origins=[],
     logger=False,
     engineio_logger=False,
 )
+
+
+def configure_cors(origins: list[str]):
+    """Set CORS allowed origins from app config."""
+    global sio
+    sio = socketio.AsyncServer(
+        async_mode="asgi",
+        cors_allowed_origins=origins,
+        logger=False,
+        engineio_logger=False,
+    )
 
 
 @sio.event
@@ -21,7 +32,7 @@ async def connect(sid: str, environ: dict, auth: Optional[dict] = None):
     token = auth.get("token") if auth else None
     if not token:
         logger.debug(f"WebSocket connection without auth: {sid}")
-        await sio.emit("connected", {"status": "authenticated"}, room=sid)
+        await sio.emit("connected", {"status": "anonymous"}, room=sid)
         return
 
     try:

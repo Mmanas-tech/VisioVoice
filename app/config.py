@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_CACHE_TTL: int = 60
 
-    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -78,6 +78,18 @@ class Settings(BaseSettings):
     @property
     def async_database_url(self) -> str:
         return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
+    def validate_production_settings(self):
+        """Validate critical settings for production environment."""
+        import os
+        if self.ENVIRONMENT == "production":
+            if not self.JWT_SECRET_KEY or self.JWT_SECRET_KEY == "":
+                self.JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
+            if not self.JWT_SECRET_KEY:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be set in production. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+                )
 
 
 @lru_cache()

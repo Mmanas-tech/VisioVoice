@@ -22,6 +22,7 @@ class TextToSpeechService:
         self._engine = None
         self._client = None
         self._elevenlabs_client = None
+        self._bark_ready = False
         self._config = kwargs
 
         if backend == "google":

@@ -112,9 +112,9 @@ def detect_face_landmarks_mediapipe(
 ) -> Optional[Dict[str, Any]]:
     """Detect face landmarks using MediaPipe Face Mesh."""
     h, w = frame.shape[:2]
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) if frame.shape[2] == 3 else frame
+    input_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) if len(frame.shape) == 3 else frame
 
-    results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) if len(frame.shape) == 3 else frame)
+    results = face_mesh.process(input_frame)
 
     if not results.multi_face_landmarks:
         return None
