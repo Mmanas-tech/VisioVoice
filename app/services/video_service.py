@@ -7,7 +7,12 @@ from typing import Optional, Tuple
 import cv2
 
 from app.config import get_settings
-from app.core.exceptions import ValidationError, VideoProcessingError
+from app.core.exceptions import (
+    FileTooLargeError,
+    UnsupportedFileTypeError,
+    ValidationError,
+    VideoProcessingError,
+)
 from app.services.storage_service import StorageService
 
 

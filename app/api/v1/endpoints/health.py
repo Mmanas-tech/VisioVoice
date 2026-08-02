@@ -33,9 +33,10 @@ except NameError:
 def check_database() -> str:
     """Check database connectivity."""
     try:
+        from sqlalchemy import text
         from app.db.database import engine
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return "healthy"
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

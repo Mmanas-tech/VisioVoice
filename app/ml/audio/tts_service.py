@@ -14,18 +14,22 @@ SAMPLE_RATE = 22050
 
 
 class TextToSpeechService:
-    """Multi-backend TTS service supporting Google, Bark, pyttsx3, and local models."""
+    """Multi-backend TTS service supporting Google, Bark, ElevenLabs, pyttsx3, and local models."""
 
     def __init__(self, backend: str = "pyttsx3", **kwargs):
         self.backend = backend
         self.sample_rate = SAMPLE_RATE
         self._engine = None
+        self._client = None
+        self._elevenlabs_client = None
         self._config = kwargs
 
         if backend == "google":
             self._init_google_tts(**kwargs)
         elif backend == "bark":
             self._init_bark(**kwargs)
+        elif backend == "elevenlabs":
+            self._init_elevenlabs(**kwargs)
         elif backend == "pyttsx3":
             self._init_pyttsx3()
         else:
@@ -62,6 +66,20 @@ class TextToSpeechService:
             logger.warning("Bark not available")
             self._bark_ready = False
 
+    def _init_elevenlabs(self, **kwargs):
+        try:
+            from elevenlabs.client import ElevenLabs
+            api_key = kwargs.get("api_key") or os.environ.get("ELEVENLABS_API_KEY")
+            if api_key:
+                self._elevenlabs_client = ElevenLabs(api_key=api_key)
+                logger.info("ElevenLabs TTS initialized")
+            else:
+                logger.warning("ElevenLabs API key not provided")
+                self._elevenlabs_client = None
+        except ImportError:
+            logger.warning("elevenlabs not available")
+            self._elevenlabs_client = None
+
     def synthesize(
         self,
         text: str,
@@ -91,6 +109,8 @@ class TextToSpeechService:
             result = self._synthesize_google(text, language, voice_name, pitch, speaking_rate)
         elif self.backend == "bark" and self._bark_ready:
             result = self._synthesize_bark(text, voice_name, language)
+        elif self.backend == "elevenlabs" and self._elevenlabs_client:
+            result = self._synthesize_elevenlabs(text, voice_name)
         elif self._engine:
             result = self._synthesize_pyttsx3(text, output_path)
         else:
@@ -144,6 +164,26 @@ class TextToSpeechService:
         speaker_prompt = f"v2/en_speaker_0" if voice == "default" else voice
         audio = generate_audio(text, history_prompt=speaker_prompt)
         return {"audio": np.array(audio, dtype=np.float32)}
+
+    def _synthesize_elevenlabs(self, text: str, voice_name: str) -> Dict[str, Any]:
+        """Synthesize using ElevenLabs."""
+        voice_id = voice_name if voice_name != "default" else "21m00Tcm4TlvDq8ikWAM"
+
+        audio_generator = self._elevenlabs_client.generate(
+            text=text,
+            voice=voice_name,
+            model="eleven_monolingual_v1",
+        )
+
+        audio_bytes = b"".join(audio_generator)
+
+        import io
+        import soundfile as sf
+        audio, sr = sf.read(io.BytesIO(audio_bytes))
+        if sr != self.sample_rate:
+            import librosa
+            audio = librosa.resample(audio, orig_sr=sr, target_sr=self.sample_rate)
+        return {"audio": audio.astype(np.float32)}
 
     def _synthesize_pyttsx3(self, text: str, output_path: Optional[str] = None) -> Dict[str, Any]:
         """Synthesize using pyttsx3."""
@@ -226,6 +266,8 @@ class TextToSpeechService:
             backends.append("google")
         if self._bark_ready:
             backends.append("bark")
+        if self._elevenlabs_client:
+            backends.append("elevenlabs")
         return backends
 
 

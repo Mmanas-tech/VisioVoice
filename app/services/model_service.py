@@ -67,24 +67,30 @@ class ModelService:
 
             start_time = time.time()
 
-            result = model.infer_single_video(
-                frames,
-                return_confidence=return_confidence,
-                return_logits=return_logits,
-            )
+            kwargs = {"return_confidence": return_confidence}
+            if return_logits and hasattr(model, '_impl') and isinstance(model._impl, type) and hasattr(model._impl, 'infer_single_video'):
+                pass
+            elif return_logits:
+                kwargs["return_logits"] = return_logits
+
+            result = model.infer_single_video(frames, **kwargs)
 
             inference_time = (time.time() - start_time) * 1000
 
+            confidence_scores = result.get("confidence_scores")
+            confidence = float(np.mean(confidence_scores)) if confidence_scores else 0.0
+
             return {
                 "raw_transcript": result["text"],
-                "characters": result["characters"],
-                "char_indices": result["char_indices"],
-                "confidence_score": float(np.mean(result["confidence_scores"])) if result["confidence_scores"] else 0.0,
-                "confidence_scores": result["confidence_scores"],
+                "characters": result.get("characters", list(result.get("text", ""))),
+                "char_indices": result.get("char_indices", []),
+                "confidence_score": confidence,
+                "confidence_scores": confidence_scores,
                 "language": language,
                 "inference_time_ms": round(inference_time, 2),
                 "device": result.get("device", "unknown"),
                 "frame_count": result.get("frame_count", len(frames)),
+                "model_type": result.get("model_type", "unknown"),
                 "logits": result.get("logits") if return_logits else None,
             }
         except Exception as e:

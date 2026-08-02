@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError, RateLimitExceededError
 from app.core.security import (
-    blacklisted_tokens,
     blacklist_token,
     create_token_pair,
     decode_token,
@@ -133,6 +132,7 @@ def refresh_token(
 def logout(
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_sync_db_session),
     redis_client=Depends(get_redis_client),
 ):
     """Logout and invalidate current token."""
@@ -141,7 +141,8 @@ def logout(
         token = auth_header.split()[1]
         blacklist_token(token, redis_client)
 
-    log_audit(get_sync_db_session().__next__(), current_user.id, "logout", request)
+    log_audit(db, current_user.id, "logout", request)
+    db.commit()
     return MessageResponse(message="Successfully logged out")
 
 

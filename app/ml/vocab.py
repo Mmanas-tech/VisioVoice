@@ -72,7 +72,7 @@ class CharacterVocab:
                 for idx in top_indices:
                     idx = int(idx)
                     prob = float(probs[idx])
-                    char = self.idx_to_idx.get(idx, "")
+                    char = self.idx_to_char.get(idx, "")
 
                     if idx == 0:
                         new_key = text

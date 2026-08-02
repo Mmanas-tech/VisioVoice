@@ -1,7 +1,16 @@
-"""Production inference pipeline for lip-reading model."""
+"""Production inference pipeline for lip-reading model.
+
+Supports two backends:
+- 'custom': LipReadingModel (ResNet3D-34 + Attention + BiGRU + CTC)
+- 'av_hubert': Facebook AV-HuBERT (via Fairseq)
+
+Use UnifiedLipReadingInference for automatic backend selection,
+or LipReadingInference for the custom model directly.
+"""
 
 import contextlib
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -15,9 +24,105 @@ from app.ml.vocab import CharacterVocab, DEFAULT_VOCAB
 logger = logging.getLogger(__name__)
 
 
+class UnifiedLipReadingInference:
+    """Unified inference interface that dispatches to the appropriate backend.
+
+    Automatically selects between custom LipReadingModel and AV-HuBERT
+    based on the MODEL_BACKEND environment variable or explicit backend parameter.
+    """
+
+    def __init__(
+        self,
+        model_path: Optional[str] = None,
+        device: str = "auto",
+        batch_size: int = 32,
+        use_fp16: bool = True,
+        vocab: Optional[CharacterVocab] = None,
+        backend: Optional[str] = None,
+        **kwargs,
+    ):
+        if backend is None:
+            backend = os.getenv("MODEL_BACKEND", "auto")
+
+        if backend == "auto":
+            backend = self._detect_backend(model_path)
+
+        self.backend = backend
+
+        if backend == "av_hubert":
+            from app.ml.av_hubert_inference import AVHubertInference, AV_HUBERT_AVAILABLE
+            if not AV_HUBERT_AVAILABLE:
+                raise ImportError(
+                    "Fairseq is required for AV-HuBERT. "
+                    "Install with: pip install fairseq"
+                )
+            checkpoint_path = kwargs.pop("checkpoint_path", None) or model_path
+            if not checkpoint_path:
+                checkpoint_path = os.getenv("AV_HUBERT_CHECKPOINT", "./models/av_hubert.pt")
+            self._impl = AVHubertInference(
+                checkpoint_path=checkpoint_path,
+                device=device,
+                use_fp16=use_fp16,
+                **kwargs,
+            )
+        else:
+            self._impl = LipReadingInference(
+                model_path=model_path or "",
+                device=device,
+                batch_size=batch_size,
+                use_fp16=use_fp16,
+                vocab=vocab,
+            )
+
+    @staticmethod
+    def _detect_backend(model_path: Optional[str]) -> str:
+        """Auto-detect the inference backend."""
+        env_backend = os.getenv("MODEL_BACKEND", "")
+        if env_backend in ("av_hubert", "custom"):
+            return env_backend
+
+        av_hubert_path = os.getenv("AV_HUBERT_CHECKPOINT", "")
+        if av_hubert_path and os.path.exists(av_hubert_path):
+            return "av_hubert"
+
+        if model_path and "av_hubert" in model_path.lower():
+            return "av_hubert"
+
+        return "custom"
+
+    def infer_single_video(
+        self,
+        frames: np.ndarray,
+        return_confidence: bool = True,
+        return_logits: bool = False,
+    ) -> Dict[str, Any]:
+        """Run inference on a single video."""
+        return self._impl.infer_single_video(
+            frames,
+            return_confidence=return_confidence,
+            **({"return_logits": return_logits} if hasattr(self._impl, '_impl') and isinstance(self._impl, LipReadingInference) else {}),
+        )
+
+    def infer_batch(
+        self,
+        video_frames_list: List[np.ndarray],
+        return_logits: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Batch inference for multiple videos."""
+        if hasattr(self._impl, 'infer_batch'):
+            return self._impl.infer_batch(video_frames_list, return_logits=return_logits)
+        return [self._impl.infer_single_video(f) for f in video_frames_list]
+
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get model metadata."""
+        info = self._impl.get_model_info()
+        info["backend"] = self.backend
+        return info
+
+
 class LipReadingInference:
     """
-    Production inference pipeline for lip-reading.
+    Production inference pipeline for custom lip-reading model.
 
     Handles model loading, preprocessing, inference, and decoding.
     Optimized for GPU with FP16 mixed precision support.
@@ -207,4 +312,5 @@ class LipReadingInference:
             "vocab_size": self.vocab.size,
             "total_parameters": self.model.count_parameters(),
             "model_type": "LipReadingModel-ResNet3D34",
+            "backend": "custom",
         }

@@ -40,7 +40,7 @@ export default function Landing() {
             <Button size="lg" onClick={() => navigate('/dashboard')}>
               Try Now <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
               Learn More
             </Button>
           </div>
@@ -89,6 +89,29 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-24 px-6 border-t border-border">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-16">
+            How It <span className="text-primary">Works</span>
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: '01', title: 'Upload Video', desc: 'Upload any silent video of a person speaking. We support MP4, MOV, AVI, and MKV formats up to 2GB.' },
+              { step: '02', title: 'AI Analysis', desc: 'Our deep learning model analyzes mouth movements frame-by-frame, using 3D convolutional neural networks and attention mechanisms.' },
+              { step: '03', title: 'Get Results', desc: 'Receive accurate transcriptions with timestamps, confidence scores, and optional audio synthesis.' },
+            ].map((item, i) => (
+              <div key={item.step} className="text-center">
+                <div className="text-5xl font-bold text-primary/20 mb-4">{item.step}</div>
+                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                <p className="text-muted-foreground">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
@@ -96,9 +119,9 @@ export default function Landing() {
             LipRead AI. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contact</a>
+            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground">Features</a>
+            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground">How It Works</a>
+            <a href="mailto:support@lipread.ai" className="text-sm text-muted-foreground hover:text-foreground">Contact</a>
           </div>
         </div>
       </footer>

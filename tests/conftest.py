@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
 from app.db.database import Base, get_sync_db_session
-from app.main import app
+from app.main import fastapi_app
 from app.models.database import User
 from app.core.security import hash_password
 
@@ -28,7 +28,7 @@ def override_get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-app.dependency_overrides[get_sync_db_session] = override_get_db
+fastapi_app.dependency_overrides[get_sync_db_session] = override_get_db
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -52,7 +52,7 @@ def db_session() -> Generator[Session, None, None]:
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     """Get a test client."""
-    with TestClient(app) as c:
+    with TestClient(fastapi_app) as c:
         yield c
 
 

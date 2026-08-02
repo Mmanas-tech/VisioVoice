@@ -32,3 +32,7 @@ htmlcov/
 .storage/
 models/*.pth
 models/*.pt
+models/pretrain_dict/
+models/s2s_dict/
+test.db
+_av_hubert_ref/

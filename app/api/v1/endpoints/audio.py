@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -116,7 +116,7 @@ def get_synthesis_status(
 @router.get("/synthesize/{transcription_id}/download/{format}")
 def download_synthesized_audio(
     transcription_id: str,
-    format: str = Query(..., pattern=r"^(wav|mp3|flac|aac|ogg)$"),
+    format: str = Path(..., pattern=r"^(wav|mp3|flac|aac|ogg)$"),
     db: Session = Depends(get_sync_db_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -162,7 +162,7 @@ def download_synthesized_audio(
 @router.get("/synthesize/{transcription_id}/subtitle/{format}")
 def download_subtitle(
     transcription_id: str,
-    format: str = Query(..., pattern=r"^(srt|vtt|ass)$"),
+    format: str = Path(..., pattern=r"^(srt|vtt|ass)$"),
     db: Session = Depends(get_sync_db_session),
     current_user: User = Depends(get_current_user),
 ):

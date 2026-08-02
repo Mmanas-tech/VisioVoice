@@ -2,13 +2,15 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
-import { Menu, X } from 'lucide-react'
+import { useUIStore } from '@/store/uiStore'
+import { Menu, X, Moon, Sun } from 'lucide-react'
 
 const navLinks = ['Features', 'How It Works', 'Pricing']
 
 export default function Navbar() {
   const navigate = useNavigate()
   const { isAuthenticated, user, logout } = useAuthStore()
+  const { theme, setTheme } = useUIStore()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -31,6 +33,15 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="h-9 w-9"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </Button>
+
           {isAuthenticated ? (
             <>
               <span className="text-sm text-muted-foreground hidden md:inline">

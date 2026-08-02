@@ -1,6 +1,17 @@
 """Custom exception classes and handlers."""
 
+import html
+import re
 from typing import Any, Optional
+
+
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent XSS and injection attacks."""
+    if not isinstance(text, str):
+        return text
+    text = html.escape(text)
+    text = re.sub(r'[<>"\']', '', text)
+    return text.strip()
 
 
 class AppException(Exception):
@@ -12,7 +23,7 @@ class AppException(Exception):
         status_code: int = 500,
         details: Optional[Any] = None,
     ):
-        self.message = message
+        self.message = sanitize_input(message) if isinstance(message, str) else message
         self.status_code = status_code
         self.details = details
         super().__init__(self.message)

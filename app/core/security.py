@@ -1,5 +1,6 @@
 """JWT authentication and password hashing utilities."""
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -8,6 +9,8 @@ from passlib.context import CryptContext
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError
+
+logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

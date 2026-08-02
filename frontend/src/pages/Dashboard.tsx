@@ -5,6 +5,8 @@ import Sidebar from '@/components/layout/Sidebar'
 import VideoUploader from '@/components/features/VideoUploader'
 import TranscriptionViewer from '@/components/features/TranscriptionViewer'
 import AudioPanel from '@/components/features/AudioPanel'
+import ProjectsPanel from '@/components/features/ProjectsPanel'
+import SettingsPanel from '@/components/features/SettingsPanel'
 import { useUIStore } from '@/store/uiStore'
 import { ToastContainer } from '@/components/ui/Toast'
 
@@ -23,28 +25,10 @@ export default function Dashboard() {
           {activeTab === 'upload' && <VideoUploader />}
           {activeTab === 'transcriptions' && <TranscriptionViewer />}
           {activeTab === 'audio' && <AudioPanel />}
-          {activeTab === 'projects' && <ProjectsPlaceholder />}
-          {activeTab === 'settings' && <SettingsPlaceholder />}
+          {activeTab === 'projects' && <ProjectsPanel />}
+          {activeTab === 'settings' && <SettingsPanel />}
         </main>
       </div>
-    </div>
-  )
-}
-
-function ProjectsPlaceholder() {
-  return (
-    <div className="text-center py-20">
-      <h2 className="text-2xl font-bold mb-4">Projects</h2>
-      <p className="text-muted-foreground">Your saved projects will appear here.</p>
-    </div>
-  )
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="text-center py-20">
-      <h2 className="text-2xl font-bold mb-4">Settings</h2>
-      <p className="text-muted-foreground">Account settings coming soon.</p>
     </div>
   )
 }

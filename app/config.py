@@ -48,6 +48,13 @@ class Settings(BaseSettings):
 
     MODEL_PATH: str = "./models/lip_reading_model.pth"
     MODEL_DEVICE: str = "cpu"
+    MODEL_BACKEND: str = "auto"  # "custom", "av_hubert", or "auto"
+
+    AV_HUBERT_CHECKPOINT: str = "./models/av_hubert.pt"
+    AV_HUBERT_BEAM_SIZE: int = 50
+    AV_HUBERT_LEN_PENALTY: float = 1.0
+    AV_HUBERT_MAX_LEN_A: float = 1.0
+    AV_HUBERT_MAX_LEN_B: int = 0
 
     MAX_UPLOAD_SIZE_MB: int = 2048
     ALLOWED_VIDEO_TYPES: List[str] = [".mp4", ".mov", ".avi", ".mkv"]

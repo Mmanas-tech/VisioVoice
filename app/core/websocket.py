@@ -1,5 +1,6 @@
 """WebSocket manager for real-time progress updates."""
 
+import json
 import logging
 import socketio
 from typing import Optional

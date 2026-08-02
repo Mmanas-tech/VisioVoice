@@ -334,9 +334,15 @@ def augment_frame(
         h, w = augmented.shape[:2]
         new_h, new_w = int(h * zoom), int(w * zoom)
         zoomed = cv2.resize(augmented, (new_w, new_h))
-        y_start = (new_h - h) // 2
-        x_start = (new_w - w) // 2
-        augmented = zoomed[y_start:y_start + h, x_start:x_start + w]
+        y_start = max(0, (new_h - h) // 2)
+        x_start = max(0, (new_w - w) // 2)
+        y_end = min(new_h, y_start + h)
+        x_end = min(new_w, x_start + w)
+        cropped = np.zeros_like(augmented)
+        copy_h = y_end - y_start
+        copy_w = x_end - x_start
+        cropped[:copy_h, :copy_w] = zoomed[y_start:y_end, x_start:x_end]
+        augmented = cropped
 
     return augmented
 
@@ -464,6 +470,97 @@ class VideoPreprocessor:
             f"avg confidence: {np.mean(metadata['confidence_scores']):.3f} | "
             f"time: {total_time:.0f}ms"
         )
+
+        return valid_frame_array, metadata
+
+    def preprocess_video_for_av_hubert(
+        self,
+        video_path: str,
+        progress_callback: Optional[callable] = None,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Preprocess video for AV-HuBERT model.
+
+        AV-HuBERT expects 88x88 grayscale frames normalized with
+        mean=0.421, std=0.165. This method returns RGB frames that
+        will be converted by AVHubertPreprocessor.
+
+        The preprocessing chain:
+        1. Extract frames at 25fps
+        2. Detect mouth region (MediaPipe/Haar cascade)
+        3. Crop and normalize mouth region
+        4. Return RGB float32 frames in [0, 1]
+
+        The AVHubertPreprocessor then converts to grayscale, crops to 88x88,
+        and applies AV-HuBERT normalization.
+
+        Args:
+            video_path: Path to video file
+            progress_callback: Progress callback function
+
+        Returns:
+            Tuple of (processed RGB frames, metadata)
+        """
+        start_time = time.time()
+
+        frames, video_metadata = extract_frames_from_video(
+            video_path, target_fps=self.config.TARGET_FPS, progress_callback=progress_callback
+        )
+
+        face_mesh = self._get_face_mesh()
+        detector_type = "mediapipe" if face_mesh else "haar"
+
+        processed_frames = []
+        mouth_bboxes = []
+        confidence_scores = []
+        valid_frames = []
+
+        for i, frame in enumerate(frames):
+            detection = detect_mouth_region(frame, face_mesh, detector_type)
+
+            if detection and detection["is_valid"]:
+                bbox = detection["mouth_bbox"]
+                cropped = crop_and_normalize_mouth(
+                    frame, bbox, self.config.MOUTH_WIDTH,
+                    self.config.NORMALIZE_LIGHTING, self.config.CLAHE_CLIP_LIMIT,
+                )
+
+                processed_frames.append(cropped)
+                mouth_bboxes.append(bbox)
+                confidence_scores.append(detection["confidence"])
+                valid_frames.append(True)
+            else:
+                valid_frames.append(False)
+                confidence_scores.append(0.0)
+                mouth_bboxes.append(None)
+
+            if progress_callback and (i + 1) % 50 == 0:
+                progress_callback(i + 1, len(frames))
+
+        valid_count = sum(valid_frames)
+        if valid_count < self.config.MIN_FRAMES:
+            raise ValueError(
+                f"Insufficient valid frames: {valid_count} < {self.config.MIN_FRAMES}"
+            )
+
+        valid_frame_array = np.array([
+            f for f, v in zip(processed_frames, valid_frames) if v
+        ])
+
+        total_time = (time.time() - start_time) * 1000
+
+        metadata = {
+            **video_metadata,
+            "processed_frame_count": len(valid_frame_array),
+            "invalid_frame_ratio": round(
+                sum(1 for v in valid_frames if not v) / len(valid_frames), 3
+            ),
+            "confidence_scores": [c for c, v in zip(confidence_scores, valid_frames) if v],
+            "valid_frames": valid_frames,
+            "preprocessing_time_ms": round(total_time, 2),
+            "detector_type": detector_type,
+            "target_model": "av_hubert",
+        }
 
         return valid_frame_array, metadata
 

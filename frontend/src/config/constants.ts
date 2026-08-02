@@ -18,13 +18,6 @@ export const TRANSCRIPTION_STATUS = {
   FAILED: 'failed',
 } as const
 
-export const VIDEO_STATUS = {
-  UPLOADED: 'uploaded',
-  PROCESSING: 'processing',
-  PROCESSED: 'processed',
-  FAILED: 'failed',
-} as const
-
 export const EXPORT_FORMATS = [
   { value: 'json', label: 'JSON', description: 'Structured data' },
   { value: 'srt', label: 'SRT', description: 'Subtitle format' },

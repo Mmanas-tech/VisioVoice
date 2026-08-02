@@ -36,19 +36,19 @@ class Conv3DBlock(nn.Module):
 class ResBlock3D(nn.Module):
     """3D Residual block with skip connection."""
 
-    def __init__(self, channels: int, stride: Tuple[int, int, int] = (1, 1, 1)):
+    def __init__(self, in_channels: int, out_channels: int, stride: Tuple[int, int, int] = (1, 1, 1)):
         super().__init__()
-        self.conv1 = nn.Conv3d(channels, channels, (3, 3, 3), stride, (1, 1, 1), bias=False)
-        self.bn1 = nn.BatchNorm3d(channels)
-        self.conv2 = nn.Conv3d(channels, channels, (3, 3, 3), (1, 1, 1), (1, 1, 1), bias=False)
-        self.bn2 = nn.BatchNorm3d(channels)
+        self.conv1 = nn.Conv3d(in_channels, out_channels, (3, 3, 3), stride, (1, 1, 1), bias=False)
+        self.bn1 = nn.BatchNorm3d(out_channels)
+        self.conv2 = nn.Conv3d(out_channels, out_channels, (3, 3, 3), (1, 1, 1), (1, 1, 1), bias=False)
+        self.bn2 = nn.BatchNorm3d(out_channels)
         self.relu = nn.ReLU(inplace=True)
 
         self.shortcut = nn.Sequential()
-        if stride != (1, 1, 1):
+        if stride != (1, 1, 1) or in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.Conv3d(channels, channels, (1, 1, 1), stride, bias=False),
-                nn.BatchNorm3d(channels),
+                nn.Conv3d(in_channels, out_channels, (1, 1, 1), stride, bias=False),
+                nn.BatchNorm3d(out_channels),
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -85,9 +85,9 @@ class ResNet3D34(nn.Module):
     def _make_layer(
         self, in_channels: int, out_channels: int, blocks: int, stride: Tuple[int, int, int]
     ) -> nn.Sequential:
-        layers = [ResBlock3D(out_channels, stride)]
+        layers = [ResBlock3D(in_channels, out_channels, stride)]
         for _ in range(1, blocks):
-            layers.append(ResBlock3D(out_channels))
+            layers.append(ResBlock3D(out_channels, out_channels))
         return nn.Sequential(*layers)
 
     def _init_weights(self):

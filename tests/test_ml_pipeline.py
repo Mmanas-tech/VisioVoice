@@ -14,7 +14,6 @@ from app.ml.vocab import CharacterVocab, DEFAULT_VOCAB
 from app.ml.video_preprocessing import (
     augment_frame,
     crop_and_normalize_mouth,
-    normalize_frames,
 )
 
 

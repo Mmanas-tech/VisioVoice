@@ -28,6 +28,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
 
+    if settings.JWT_SECRET_KEY in ("change-me-in-production", "your-super-secret-key-change-in-production"):
+        logger.critical(
+            "SECURITY WARNING: JWT_SECRET_KEY is set to a default value! "
+            "This is insecure and must be changed in production. "
+            "Set a strong, unique JWT_SECRET_KEY in your .env file."
+        )
+
     try:
         from app.db.database import engine
         from sqlalchemy import text
@@ -44,6 +51,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Redis connection established")
     except Exception as e:
         logger.error(f"Redis connection failed: {e}")
+
+    import asyncio
+    from app.core.websocket import redis_listener
+    asyncio.create_task(redis_listener())
 
     yield
 
@@ -73,6 +84,25 @@ def create_app() -> FastAPI:
 
     if settings.ENVIRONMENT == "production":
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
+    from app.core.rate_limiter import RateLimitMiddleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+        failed_login_limit=settings.RATE_LIMIT_FAILED_LOGIN,
+    )
+
+    @app.middleware("http")
+    async def security_headers_middleware(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.ENVIRONMENT == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
     @app.middleware("http")
     async def request_middleware(request: Request, call_next):
@@ -144,17 +174,6 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(audio_router, prefix="/api/v1")
 
-    from app.core.websocket import sio, redis_listener
-    import socketio.asgi
-    import asyncio
-
-    sio_app = socketio.ASGIApp(sio, app)
-    app = sio_app
-
-    @app.on_event("startup")
-    async def start_redis_listener():
-        asyncio.create_task(redis_listener())
-
     @app.get("/")
     async def root():
         return {
@@ -163,7 +182,15 @@ def create_app() -> FastAPI:
             "docs": "/docs" if settings.DEBUG else "API documentation not available in production",
         }
 
-    return app
+    from app.core.websocket import sio
+    import socketio.asgi
+
+    raw_app = app
+    app = socketio.ASGIApp(sio, app)
+
+    return app, raw_app
 
 
-app = create_app()
+_result = create_app()
+app = _result[0]
+fastapi_app = _result[1]
